@@ -1,0 +1,18 @@
+# Render の設定（Blueprint）。Render の管理画面で「New → Blueprint」からこのリポジトリを選ぶと読み込まれる
+services:
+  - type: web
+    name: medikataru-for-pet
+    runtime: node
+    plan: free # 無料プラン。15分使わないと止まり、次のアクセスで30秒〜1分ほどかけて起きる
+    region: singapore # 日本から近い地域
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: ANTHROPIC_EFFORT
+        value: medium
+      # 作成時に Render の画面で入力する（このファイルには書かない）
+      - key: ANTHROPIC_API_KEY
+        sync: false

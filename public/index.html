@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="description" content="動物病院での説明を、家族みんなにわかる言葉へ。受診歴のまとめと、皮膚・傷の写真記録も。">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#fbf5ee" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1c140f" media="(prefers-color-scheme: dark)">
+    <title>MediKataru for pet</title>
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icons/icon.svg">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <script src="/js/boot.js"></script>
+    <!-- 丸みのある、やさしい書体。読み込めないときは端末の日本語書体で表示される -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap">
+    <link rel="stylesheet" href="/css/style.css">
+    <script type="module" src="/js/app.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a href="#/" class="brand" aria-label="MediKataru for pet 最初の画面へ">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32">
+              <g fill="currentColor">
+                <ellipse cx="16" cy="20" rx="6" ry="5"/>
+                <ellipse cx="8.5" cy="13.5" rx="2.4" ry="3" transform="rotate(-20 8.5 13.5)"/>
+                <ellipse cx="13.3" cy="9.5" rx="2.4" ry="3.2"/>
+                <ellipse cx="18.7" cy="9.5" rx="2.4" ry="3.2"/>
+                <ellipse cx="23.5" cy="13.5" rx="2.4" ry="3" transform="rotate(20 23.5 13.5)"/>
+              </g>
+            </svg>
+          </span>
+          <span>
+            <span class="brand-name">Medi<b>Kataru</b><em>for pet</em></span>
+            <small>動物病院の説明を、家族の言葉に。</small>
+          </span>
+        </a>
+        <div class="top-actions no-print">
+          <div class="textsize" role="group" aria-label="文字の大きさ">
+            <span class="textsize-label">文字</span>
+            <button type="button" data-size="normal">標準</button>
+            <button type="button" data-size="large">大</button>
+            <button type="button" data-size="xlarge">特大</button>
+          </div>
+          <a class="icon-link" href="#/settings" aria-label="設定・バックアップ">⚙</a>
+        </div>
+      </div>
+    </header>
+    <main class="container" id="app">
+      <p class="muted center">読み込んでいます…</p>
+      <noscript><p class="notice">このアプリを使うには JavaScript を有効にしてください。</p></noscript>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "MediKataru for pet",
+  "short_name": "MediKataru pet",
+  "description": "動物病院での説明を、家族みんなにわかる言葉で。",
+  "lang": "ja",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbf5ee",
+  "theme_color": "#b8481f",
+  "icons": [{ "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
