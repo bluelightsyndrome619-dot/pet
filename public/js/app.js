@@ -42,14 +42,14 @@ const SAMPLE = `獣医師：今日はかゆみの件ですね。お腹と内股�
 // offline: 電波がない・サーバーが応答しない（ホーム画面のアプリを電波のないところで開いたときなど）
 let aiStatus = { ai: false, model: "demo", server: location.protocol !== "file:", offline: false };
 
-async function loadStatus() {
+async function loadStatus(timeoutMs = 5000) {
   if (!aiStatus.server) return;
   if (navigator.onLine === false) {
     aiStatus = { ...aiStatus, offline: true };
     return;
   }
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 5000); // 起動を待たせすぎない
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const res = await fetch("/api/status", { cache: "no-store", signal: ctrl.signal });
     if (res.ok) aiStatus = { ...aiStatus, ...(await res.json()), offline: false };
@@ -63,6 +63,9 @@ async function loadStatus() {
 
 // AI に頼むときの注意書き（電波がない／お試し表示）
 function aiNotice() {
+  if (aiStatus.waking) {
+    return `<p class="notice">⏳ サーバーを準備しています（30秒ほど）。記録や入力はこのまま進められます。</p>`;
+  }
   if (aiStatus.offline) {
     return `<p class="notice">📡 電波がないか、サーバーにつながりません。記録や入力はできますが、まとめるのは電波のあるところでお願いします。</p>`;
   }
@@ -862,7 +865,10 @@ async function viewRecord(petId) {
       transcript: ta.value.trim(),
       consent: $("#consent").checked,
     };
-    const hide = showLoading("わかりやすい言葉にまとめています", "30秒から1分ほどかかります。<br>この画面のまま、お待ちください。");
+    const hide = showLoading(
+      "わかりやすい言葉にまとめています",
+      "30秒から1分ほどかかります。<br>しばらく使っていなかったときは、さらに30秒ほどかかります。<br>この画面のまま、お待ちください。",
+    );
     $("#sum-error").hidden = true;
     if (aiStatus.offline) await loadStatus();
     try {
@@ -1586,5 +1592,56 @@ window.addEventListener("online", () => loadStatus());
 window.addEventListener("offline", () => (aiStatus = { ...aiStatus, offline: true }));
 setupTextSize();
 initPwa();
-await loadStatus();
-render();
+startApp();
+
+// サーバー（Render の無料プラン）は、しばらく使われないと眠り、起きるまで30秒ほどかかる。
+// すぐに返事がないときは「30秒ほどお待ちください」の画面を出し、起きたら閉じる。
+// 記録と写真は端末の中にあるので、待たずに見ることもできる。
+async function startApp() {
+  const status = loadStatus(90000);
+  const quick = await Promise.race([status.then(() => true), new Promise((r) => setTimeout(() => r(false), 1500))]);
+  if (quick) return render();
+
+  aiStatus = { ...aiStatus, waking: true };
+  render();
+  const splash = showWaking();
+  await status;
+  aiStatus = { ...aiStatus, waking: false };
+  if (splash.open()) {
+    splash.close();
+    render();
+    if (aiStatus.offline) toast("サーバーにつながりませんでした。記録や写真は見られます");
+  } else {
+    // 「待たずに使う」を押した後：入力中かもしれないので画面は描き直さず、お知らせだけ
+    toast(aiStatus.offline ? "サーバーにつながりませんでした。まとめるのは電波のよいところで" : "準備ができました。AIでまとめられます");
+  }
+}
+
+function showWaking() {
+  const box = document.createElement("div");
+  box.className = "overlay waking";
+  box.setAttribute("role", "dialog");
+  box.setAttribute("aria-modal", "true");
+  box.setAttribute("aria-labelledby", "waking-title");
+  box.innerHTML = `
+    <div class="overlay-box">
+      <div class="paw-loader" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      <p class="headline" id="waking-title">アプリを準備しています</p>
+      <p>しばらく使われていなかったため、起動に少し時間がかかります。<br><b>30秒ほど</b>お待ちください。</p>
+      <p class="muted small waking-count" aria-live="off">0秒</p>
+      <button type="button" class="btn btn-ghost">待たずに記録や写真を見る</button>
+      <p class="muted small">AIでまとめるのは、準備ができてからになります。</p>
+    </div>`;
+  document.body.append(box);
+  const started = Date.now();
+  const timer = setInterval(() => {
+    box.querySelector(".waking-count").textContent = `${Math.round((Date.now() - started) / 1000)}秒`;
+  }, 1000);
+  const close = () => {
+    clearInterval(timer);
+    box.remove();
+  };
+  box.querySelector("button").onclick = close;
+  box.querySelector("button").focus();
+  return { open: () => box.isConnected, close };
+}

@@ -61,7 +61,7 @@ export function ageText(birthday) {
   return y ? `${y}歳${m ? `${m}か月` : ""}` : `${m}か月`;
 }
 
-/** 下に少しだけ出るお知らせ */
+/** 下に出るお知らせ。5秒で消える。押しても消える */
 export function toast(message) {
   let box = $(".toast");
   if (!box) {
@@ -69,12 +69,17 @@ export function toast(message) {
     box.className = "toast";
     box.setAttribute("role", "status");
     box.setAttribute("aria-live", "polite");
+    box.title = "押すと閉じます";
+    box.addEventListener("click", () => {
+      clearTimeout(toast.timer);
+      box.classList.remove("show");
+    });
     document.body.append(box);
   }
-  box.textContent = message;
+  box.innerHTML = `<span class="toast-text">${h(message)}</span><span class="toast-x" aria-hidden="true">✕</span>`;
   box.classList.add("show");
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => box.classList.remove("show"), 3200);
+  toast.timer = setTimeout(() => box.classList.remove("show"), 5000);
 }
 
 /** 「本当に消しますか？」をもう一度聞く */
