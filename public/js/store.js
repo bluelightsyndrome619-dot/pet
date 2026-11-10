@@ -129,6 +129,16 @@ export async function importAll(data) {
   return { pets: data.pets?.length || 0, visits: data.visits?.length || 0, photos: data.photos?.length || 0 };
 }
 
+// バックアップの声かけ用：記録の数と、いちばん古い記録の日時
+export async function dataSummary() {
+  const [visits, photos] = await Promise.all([
+    tx("visits", "readonly", (s) => done(s.getAll())),
+    tx("photos", "readonly", (s) => done(s.getAll())),
+  ]);
+  const firstAt = [...visits, ...photos].map((x) => x.createdAt).filter(Boolean).sort()[0] || null;
+  return { visits: visits.length, photos: photos.length, firstAt };
+}
+
 // 保存容量の目安（対応ブラウザのみ）。ブラウザに「消さないで」とお願いもしておく
 export async function storageInfo() {
   try {

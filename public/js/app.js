@@ -1,5 +1,6 @@
 import * as store from "./store.js";
 import { takePhoto, pickFile, makeThumb } from "./camera.js";
+import { renderBackupReminder, runExport, markBackedUp, lastBackupText } from "./backup.js";
 import {
   h, $, $$, today, formatDate, formatShortDate, daysBetween, ageText, toast, confirmDialog, openSheet,
   showLoading, list, section, usageText,
@@ -174,6 +175,7 @@ async function viewHome() {
   document.title = "MediKataru for pet";
 
   app.innerHTML = `
+    <div id="backup-slot"></div>
     <section class="hero">
       <div class="hero-text">
         <p class="eyebrow">MediKataru for pet</p>
@@ -220,6 +222,7 @@ async function viewHome() {
     </a>
 
     <p class="privacy-note">🔒 記録と写真は、この端末のブラウザの中だけに保存されます。機種変更の前は「設定」からバックアップしてください。</p>`;
+  renderBackupReminder($("#backup-slot"));
 }
 
 function heroArt() {
@@ -391,6 +394,8 @@ async function viewPet(id) {
       </div>
     </section>
 
+    <div id="backup-slot"></div>
+
     <div class="action-grid">
       <a class="btn btn-primary btn-big" href="#/pet/${pet.id}/record">
         <span class="btn-icon" aria-hidden="true">🎙</span>
@@ -465,6 +470,7 @@ async function viewPet(id) {
     const saved = await photoFlow(pet, {});
     if (saved) render();
   };
+  renderBackupReminder($("#backup-slot"));
 }
 
 // ============================================================
@@ -1472,6 +1478,7 @@ async function viewSettings() {
       title: "バックアップ",
       body: `
         <p class="muted">記録と写真は、この端末のブラウザの中だけに保存されています。ブラウザのデータを消したり、機種変更したりすると消えてしまうので、ときどきファイルに書き出してください。</p>
+        <p class="small"><b id="last-backup">${h(lastBackupText())}</b></p>
         ${info ? `<p class="small">使っている容量：約${mb(info.usage)}MB${info.quota ? ` / 使える目安 ${mb(info.quota)}MB` : ""}</p>` : ""}
         <div class="stack-sm">
           <button type="button" class="btn btn-primary btn-wide" id="export">⬇ ファイルに書き出す（写真も含む）</button>
@@ -1491,19 +1498,7 @@ async function viewSettings() {
     <p class="muted small center">MediKataru for pet ・ これはAIによる下書きです。診断や治療の判断には使わず、必ず獣医師に確認してください。</p>`;
 
   $("#export").onclick = async () => {
-    const hide = showLoading("書き出しています", "写真が多いと少し時間がかかります。");
-    try {
-      const data = await store.exportAll();
-      const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `medikataru-pet-backup-${today()}.json`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-      toast("書き出しました");
-    } finally {
-      hide();
-    }
+    if (await runExport()) $("#last-backup").textContent = lastBackupText();
   };
   $("#import").onchange = async (e) => {
     const file = e.target.files?.[0];
@@ -1517,6 +1512,7 @@ async function viewSettings() {
     const hide = showLoading("読み込んでいます", "写真が多いと少し時間がかかります。");
     try {
       const r = await store.importAll(JSON.parse(await file.text()));
+      markBackedUp(); // 読み込んだ記録は、そのファイルに残っている
       toast(`読み込みました（ペット${r.pets}・受診${r.visits}・写真${r.photos}）`);
       go("#/");
     } catch (err) {

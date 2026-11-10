@@ -533,6 +533,18 @@ dialog::backdrop { background: rgba(43, 22, 10, 0.5); backdrop-filter: blur(3px)
 .cam-ghost-toggle input { width: 22px; height: 22px; accent-color: #f0a04b; }
 .cam-link { background: none; border: 0; color: #ffd2b0; font: inherit; font-size: 0.85rem; text-decoration: underline; min-height: 44px; cursor: pointer; }
 
+/* ---------- バックアップのお知らせ ---------- */
+.backup-banner {
+  margin-bottom: 20px; padding: 18px 20px; border-radius: var(--radius);
+  background: var(--warn-bg); color: var(--warn-text); border: 2px solid var(--warn-border); box-shadow: var(--shadow);
+}
+.backup-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1rem; line-height: 1.5; margin: 0 0 6px; }
+.backup-icon { font-size: 1.4rem; }
+.backup-text { margin: 0 0 12px; font-size: 0.95rem; }
+.backup-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.backup-actions .btn-primary { flex: 1 1 200px; }
+.backup-banner .btn-ghost { color: var(--warn-text); }
+
 /* ---------- 待ち時間・お知らせ ---------- */
 .overlay { position: fixed; inset: 0; z-index: 100; background: rgba(43, 22, 10, 0.55); display: grid; place-items: center; padding: 20px; backdrop-filter: blur(4px); }
 .overlay-box { background: var(--surface); border-radius: 28px; padding: 30px 26px; text-align: center; max-width: 420px; box-shadow: var(--shadow-lg); }
