@@ -1,7 +1,7 @@
 // バックアップの声かけ
 // 記録と写真は端末の中だけにあるため、機種変更やブラウザのデータ削除で消えないよう、
 // 「最後のバックアップ（なければ最初の記録）から30日」たったら、画面の上でお知らせする。
-// 「あとで」を押したら7日間は出さない。
+// 「あとで」を押したら30日間は出さず、31日目にまた出す。
 // 日時の保存は localStorage（使えない環境では毎回「まだ」として扱い、画面は普通に動く）
 
 import * as store from "./store.js";
@@ -10,7 +10,7 @@ import { h, formatDate, today, toast, showLoading } from "./ui.js";
 const LAST_KEY = "mkp-last-backup";
 const SNOOZE_KEY = "mkp-backup-snooze";
 export const REMIND_DAYS = 30;
-const SNOOZE_DAYS = 7;
+const SNOOZE_DAYS = 30;
 const DAY = 86400000;
 
 function read(key) {
