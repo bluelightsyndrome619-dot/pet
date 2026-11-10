@@ -1,6 +1,7 @@
 import * as store from "./store.js";
 import { takePhoto, pickFile, makeThumb } from "./camera.js";
 import { renderBackupReminder, runExport, markBackedUp, lastBackupText } from "./backup.js";
+import { initPwa, renderInstallGuide } from "./pwa.js";
 import {
   h, $, $$, today, formatDate, formatShortDate, daysBetween, ageText, toast, confirmDialog, openSheet,
   showLoading, list, section, usageText,
@@ -37,15 +38,38 @@ const SAMPLE = `獣医師：今日はかゆみの件ですね。お腹と内股�
 // AI の呼び出し（キーはサーバーだけが持つ）
 // ============================================================
 
-let aiStatus = { ai: false, model: "demo", server: false };
+// server: サーバーから開いているか（ファイルを直接開いたときだけ false。そのときはお試し表示で流れを確かめる）
+// offline: 電波がない・サーバーが応答しない（ホーム画面のアプリを電波のないところで開いたときなど）
+let aiStatus = { ai: false, model: "demo", server: location.protocol !== "file:", offline: false };
 
 async function loadStatus() {
-  try {
-    const res = await fetch("/api/status", { cache: "no-store" });
-    if (res.ok) aiStatus = { ...(await res.json()), server: true };
-  } catch {
-    aiStatus = { ai: false, model: "demo", server: false };
+  if (!aiStatus.server) return;
+  if (navigator.onLine === false) {
+    aiStatus = { ...aiStatus, offline: true };
+    return;
   }
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 5000); // 起動を待たせすぎない
+  try {
+    const res = await fetch("/api/status", { cache: "no-store", signal: ctrl.signal });
+    if (res.ok) aiStatus = { ...aiStatus, ...(await res.json()), offline: false };
+    else aiStatus = { ...aiStatus, offline: true };
+  } catch {
+    aiStatus = { ...aiStatus, offline: true };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// AI に頼むときの注意書き（電波がない／お試し表示）
+function aiNotice() {
+  if (aiStatus.offline) {
+    return `<p class="notice">📡 電波がないか、サーバーにつながりません。記録や入力はできますが、まとめるのは電波のあるところでお願いします。</p>`;
+  }
+  if (!aiStatus.ai) {
+    return `<p class="notice">お試し表示中：AIの設定（ANTHROPIC_API_KEY）がないため、まとめは作られず、画面の流れだけ確かめられます。</p>`;
+  }
+  return "";
 }
 
 async function postJson(path, body) {
@@ -185,6 +209,8 @@ async function viewHome() {
       <div class="hero-art" aria-hidden="true">${heroArt()}</div>
     </section>
 
+    <div id="install-slot"></div>
+
     ${
       rows.length
         ? `<h2 class="list-heading">うちの子 <span class="muted small">（${rows.length}）</span></h2>
@@ -223,6 +249,7 @@ async function viewHome() {
 
     <p class="privacy-note">🔒 記録と写真は、この端末のブラウザの中だけに保存されます。機種変更の前は「設定」からバックアップしてください。</p>`;
   renderBackupReminder($("#backup-slot"));
+  renderInstallGuide($("#install-slot"), { dismissible: true });
 }
 
 function heroArt() {
@@ -595,11 +622,7 @@ async function viewRecord(petId) {
   app.innerHTML = `
     ${back(`#/pet/${pet.id}`, `${pet.name}のページにもどる`)}
     <h1 class="with-avatar">${avatar(pet, "avatar-sm")}<span>${h(pet.name)}の説明を記録</span></h1>
-    ${
-      aiStatus.ai
-        ? ""
-        : `<p class="notice">お試し表示中：AIの設定（ANTHROPIC_API_KEY）がないため、まとめは作られず、画面の流れだけ確かめられます。</p>`
-    }
+    ${aiNotice()}
     <ol class="steps" aria-label="進み具合">
       ${STEP_NAMES.map((n, i) => `<li data-step="${i}">${i + 1}. ${n}</li>`).join("")}
     </ol>
@@ -841,6 +864,7 @@ async function viewRecord(petId) {
     };
     const hide = showLoading("わかりやすい言葉にまとめています", "30秒から1分ほどかかります。<br>この画面のまま、お待ちください。");
     $("#sum-error").hidden = true;
+    if (aiStatus.offline) await loadStatus();
     try {
       const out = aiStatus.server ? await postJson("/api/visit-summary", payload) : localDemoVisit(payload.transcript);
       const visit = await store.saveVisit({
@@ -1464,13 +1488,21 @@ async function viewSettings() {
     ${section({
       icon: "✨",
       title: "AIによるまとめ",
-      body: aiStatus.ai
-        ? `<p class="alert alert-ok">使えます（${h(aiStatus.model)}）</p>`
-        : `<p class="notice">${
-            aiStatus.server
-              ? "お試し表示中です。サーバーに ANTHROPIC_API_KEY を設定すると、AIでまとめられるようになります。"
-              : "サーバーにつながっていません。<code>npm start</code> で起動したサーバーから開いてください（今は画面の流れだけ確かめられます）。"
-          }</p>`,
+      body: aiStatus.offline
+        ? `<p class="notice">📡 電波がないか、サーバーにつながりません。記録や写真は見られます。まとめるのは電波のあるところでお願いします。</p>`
+        : aiStatus.ai
+          ? `<p class="alert alert-ok">使えます（${h(aiStatus.model)}）</p>`
+          : `<p class="notice">${
+              aiStatus.server
+                ? "お試し表示中です。サーバーに ANTHROPIC_API_KEY を設定すると、AIでまとめられるようになります。"
+                : "サーバーにつながっていません。<code>npm start</code> で起動したサーバーから開いてください（今は画面の流れだけ確かめられます）。"
+            }</p>`,
+    })}
+
+    ${section({
+      icon: "📱",
+      title: "ホーム画面に追加（アプリのように使う）",
+      body: `<div id="install-slot"></div>`,
     })}
 
     ${section({
@@ -1497,6 +1529,7 @@ async function viewSettings() {
     })}
     <p class="muted small center">MediKataru for pet ・ これはAIによる下書きです。診断や治療の判断には使わず、必ず獣医師に確認してください。</p>`;
 
+  renderInstallGuide($("#install-slot"));
   $("#export").onclick = async () => {
     if (await runExport()) $("#last-backup").textContent = lastBackupText();
   };
@@ -1548,6 +1581,10 @@ function setupTextSize() {
 }
 
 window.addEventListener("hashchange", render);
+// 電波がもどったら、AI が使えるかを確かめ直す
+window.addEventListener("online", () => loadStatus());
+window.addEventListener("offline", () => (aiStatus = { ...aiStatus, offline: true }));
 setupTextSize();
+initPwa();
 await loadStatus();
 render();

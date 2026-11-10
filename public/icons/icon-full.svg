@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- ホーム画面用（端末が角を丸めるため、四角いまま・絵は中央の安全な範囲に収める） -->
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a3a16"/><stop offset="1" stop-color="#e88a45"/></linearGradient></defs>
+  <rect width="64" height="64" fill="url(#g)"/>
+  <g transform="translate(32 31) scale(0.72) translate(-32 -31)">
+    <g fill="#fff">
+      <ellipse cx="32" cy="40" rx="11" ry="9"/>
+      <ellipse cx="18" cy="28" rx="4.5" ry="5.6" transform="rotate(-20 18 28)"/>
+      <ellipse cx="27" cy="20" rx="4.5" ry="6"/>
+      <ellipse cx="37" cy="20" rx="4.5" ry="6"/>
+      <ellipse cx="46" cy="28" rx="4.5" ry="5.6" transform="rotate(20 46 28)"/>
+    </g>
+    <path d="M32 44c-3.6-2.8-6-4.8-6-7.2a2.8 2.8 0 0 1 6-1.2 2.8 2.8 0 0 1 6 1.2c0 2.4-2.4 4.4-6 7.2z" fill="#c4552a"/>
+  </g>
+</svg>

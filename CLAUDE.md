@@ -9,6 +9,7 @@
 - CSP（`server.js`）でインラインの script / style 属性は禁止。色や見た目はクラスで指定する
 - 記録と写真はブラウザ（IndexedDB）に保存する。写真はサーバーにも AI にも送らない
 - AI のまとめに、会話に無い情報を付け足させない（`lib/ai.js` のプロンプト）
+- 画面のファイル（`public/` の JS・CSS など）を増やしたら、`public/sw.js` の `PRECACHE` に足し、`VERSION` を上げる（電波がないときに開けなくなるため）
 
 ## 確認
 - `npm run check`（全 JavaScript の文法チェック）

@@ -9,8 +9,15 @@
     <meta name="theme-color" content="#1c140f" media="(prefers-color-scheme: dark)">
     <title>MediKataru for pet</title>
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/icons/icon.svg">
+    <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192">
+    <!-- iPhone のホーム画面のアイコンは PNG が必要 -->
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
     <link rel="manifest" href="/manifest.webmanifest">
+    <!-- ホーム画面から開いたとき、アプリのように全画面で表示する（iPhone） -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="MediKataru">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <script src="/js/boot.js"></script>
     <!-- 丸みのある、やさしい書体。読み込めないときは端末の日本語書体で表示される -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

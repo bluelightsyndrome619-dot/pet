@@ -1,11 +1,21 @@
 {
+  "id": "/",
   "name": "MediKataru for pet",
-  "short_name": "MediKataru pet",
-  "description": "動物病院での説明を、家族みんなにわかる言葉で。",
+  "short_name": "MediKataru",
+  "description": "動物病院での説明を、家族みんなにわかる言葉で。受診歴のまとめと、皮膚・傷の写真記録も。",
   "lang": "ja",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#fbf5ee",
-  "theme_color": "#b8481f",
-  "icons": [{ "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+  "theme_color": "#fbf5ee",
+  "categories": ["health", "lifestyle", "medical"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
 }
