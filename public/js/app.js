@@ -2,6 +2,7 @@ import * as store from "./store.js";
 import { takePhoto, pickFile, makeThumb } from "./camera.js";
 import { renderBackupReminder, runExport, markBackedUp, lastBackupText } from "./backup.js";
 import { initPwa, renderInstallGuide } from "./pwa.js";
+import { initDaily, viewDaily, viewDays, viewReport, dailySectionHtml } from "./daily.js";
 import {
   h, $, $$, today, formatDate, formatShortDate, daysBetween, ageText, toast, confirmDialog, openSheet,
   showLoading, list, section, usageText,
@@ -22,6 +23,7 @@ const SPECIES = [
 const SEXES = ["オス", "メス", "オス（去勢済み）", "メス（避妊済み）", "わからない"];
 const SCENES = ["診察・再診", "ワクチン・健康診断", "検査結果の説明", "手術・処置", "入院・退院", "その他"];
 const PARTS = ["皮膚", "傷・できもの", "耳", "目", "口・歯", "足・肉球", "お腹", "背中", "しっぽ・おしり", "その他"];
+const DIARY_PART = "できごと"; // 日々の記録から撮った写真
 
 const speciesIcon = (s) => SPECIES.find((x) => x.value === s)?.icon || "🐾";
 
@@ -154,6 +156,9 @@ async function render() {
     else if (parts[0] === "pet" && parts[2] === "record") await viewRecord(parts[1]);
     else if (parts[0] === "pet" && parts[2] === "photos") await viewPhotos(parts[1], query);
     else if (parts[0] === "pet" && parts[2] === "history") await viewHistoryEntry(parts[1]);
+    else if (parts[0] === "pet" && parts[2] === "daily") await viewDaily(parts[1], query);
+    else if (parts[0] === "pet" && parts[2] === "days") await viewDays(parts[1]);
+    else if (parts[0] === "pet" && parts[2] === "report") await viewReport(parts[1], query);
     else if (parts[0] === "pet" && parts[1]) await viewPet(parts[1]);
     else if (parts[0] === "visit" && parts[1]) await viewVisit(parts[1], query);
     else notFound();
@@ -407,7 +412,7 @@ async function viewPetForm(id) {
 async function viewPet(id) {
   const pet = await store.getPet(id);
   if (!pet) return notFound();
-  const [visits, photos] = await Promise.all([store.listVisits(id), store.listPhotos(id)]);
+  const [visits, photos, dailyHtml] = await Promise.all([store.listVisits(id), store.listPhotos(id), dailySectionHtml(pet)]);
   document.title = `${pet.name} | MediKataru for pet`;
 
   app.innerHTML = `
@@ -426,10 +431,14 @@ async function viewPet(id) {
 
     <div id="backup-slot"></div>
 
-    <div class="action-grid">
+    <div class="action-grid action-grid-3">
+      <a class="btn btn-primary btn-big" href="#/pet/${pet.id}/daily">
+        <span class="btn-icon" aria-hidden="true">📔</span>
+        <span>今日の記録をつける<span class="btn-sub">ごはん・体重・うんち${pet.species === "犬" ? "・散歩" : ""}・日記</span></span>
+      </a>
       <a class="btn btn-primary btn-big" href="#/pet/${pet.id}/record">
         <span class="btn-icon" aria-hidden="true">🎙</span>
-        <span>説明を記録する<span class="btn-sub">録音して、わかりやすく</span></span>
+        <span>病院の説明を記録する<span class="btn-sub">録音して、わかりやすく</span></span>
       </a>
       <button type="button" class="btn btn-accent btn-big" id="take-photo">
         <span class="btn-icon" aria-hidden="true">📷</span>
@@ -446,6 +455,8 @@ async function viewPet(id) {
            </a>`
         : ""
     }
+
+    ${dailyHtml}
 
     <section class="block">
       <h2 class="list-heading">受診の記録 <span class="muted small">（${visits.length}件）</span></h2>
@@ -507,14 +518,15 @@ async function viewPet(id) {
 // 写真を撮って保存する流れ：部位を選ぶ → 撮る → メモして保存
 // ============================================================
 
-async function photoFlow(pet, { visitId = null, date = today() }) {
+// part を渡すと「どこを撮るか」を飛ばす（日々の記録の「できごと」の写真など）
+async function photoFlow(pet, { visitId = null, date = today(), part: presetPart = null }) {
   const photos = await store.listPhotos(pet.id);
   const lastByPart = {};
   for (const p of photos) if (!lastByPart[p.part]) lastByPart[p.part] = p;
 
   // 1. どこを撮るか
-  let part = null;
-  const { value } = await openSheet(
+  let part = presetPart;
+  const { value } = presetPart ? { value: presetPart } : await openSheet(
     `<form method="dialog" class="sheet-body">
        <h2 class="sheet-title">どこを撮りますか？</h2>
        <p class="muted small">前に同じ場所を撮っていれば、その写真をうすく重ねて、同じ角度で撮れます。</p>
@@ -530,8 +542,8 @@ async function photoFlow(pet, { visitId = null, date = today() }) {
   if (!value || value === "cancel") return null;
   part = value;
 
-  // 2. 撮る
-  const blob = await takePhoto({ ghostUrl: lastByPart[part]?.thumb || null, title: `${part}を撮る` });
+  // 2. 撮る（同じ場所の写真を重ねるのは、体の場所を撮るときだけ）
+  const blob = await takePhoto({ ghostUrl: presetPart ? null : lastByPart[part]?.thumb || null, title: `${part}を撮る` });
   if (!blob) return null;
 
   // 3. メモして保存
@@ -541,7 +553,7 @@ async function photoFlow(pet, { visitId = null, date = today() }) {
        <h2 class="sheet-title">${h(part)}の写真を保存</h2>
        <img class="sheet-photo" src="${previewUrl}" alt="撮った写真">
        ${
-         lastByPart[part]
+         lastByPart[part] && !presetPart
            ? `<p class="muted small">前回（${formatDate(lastByPart[part].date)}）の写真と、あとで「くらべる」で並べて見られます。</p>`
            : ""
        }
@@ -552,12 +564,14 @@ async function photoFlow(pet, { visitId = null, date = today() }) {
          </div>
          <div>
            <label for="ph-part">場所</label>
-           <select id="ph-part" name="part">${PARTS.map((p) => `<option ${p === part ? "selected" : ""}>${p}</option>`).join("")}</select>
+           <select id="ph-part" name="part">${[DIARY_PART, ...PARTS].map((p) => `<option ${p === part ? "selected" : ""}>${p}</option>`).join("")}</select>
          </div>
        </div>
        <div>
          <label for="ph-memo">様子のメモ <span class="hint">受診歴のまとめにも使われます</span></label>
-         <textarea id="ph-memo" name="memo" rows="3" maxlength="300" placeholder="例：右の内股。赤みは500円玉くらい。昨日より少し広がった。かゆがる。"></textarea>
+         <textarea id="ph-memo" name="memo" rows="3" maxlength="300" placeholder="${
+           presetPart ? "例：公園でたくさん走った。帰ってから足をなめている。" : "例：右の内股。赤みは500円玉くらい。昨日より少し広がった。かゆがる。"
+         }"></textarea>
        </div>
        <div class="sheet-actions">
          <button value="cancel" class="btn">保存しない</button>
@@ -1552,7 +1566,7 @@ async function viewSettings() {
     try {
       const r = await store.importAll(JSON.parse(await file.text()));
       markBackedUp(); // 読み込んだ記録は、そのファイルに残っている
-      toast(`読み込みました（ペット${r.pets}・受診${r.visits}・写真${r.photos}）`);
+      toast(`読み込みました（ペット${r.pets}・受診${r.visits}・日々の記録${r.daily}日・写真${r.photos}）`);
       go("#/");
     } catch (err) {
       toast(err.message || "読み込めませんでした");
@@ -1592,6 +1606,18 @@ window.addEventListener("online", () => loadStatus());
 window.addEventListener("offline", () => (aiStatus = { ...aiStatus, offline: true }));
 setupTextSize();
 initPwa();
+initDaily({
+  app,
+  avatar,
+  back,
+  notFound,
+  photoFlow,
+  postJson,
+  go,
+  petForAi,
+  aiStatus: () => aiStatus,
+  setCleanup: (fn) => (cleanup = fn),
+});
 startApp();
 
 // サーバー（Render の無料プラン）は、しばらく使われないと眠り、起きるまで30秒ほどかかる。

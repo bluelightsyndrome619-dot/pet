@@ -22,7 +22,7 @@ for (const name of [".env.local", ".env"]) {
   }
 }
 
-const { summarizeVisit, summarizeHistory, aiEnabled, MODEL, SummarizeError } = await import("./lib/ai.js");
+const { summarizeVisit, summarizeHistory, summarizeDaily, aiEnabled, MODEL, SummarizeError } = await import("./lib/ai.js");
 
 const PORT = Number(process.env.PORT || 3000);
 const MAX_BODY = 1024 * 1024; // 1MB。写真はサーバーに送らないので、文字だけなら十分
@@ -96,7 +96,7 @@ async function handleApi(req, res, path) {
   if (path === "/api/status") return json(res, 200, { ai: aiEnabled(), model: aiEnabled() ? MODEL : "demo" });
 
   if (req.method !== "POST") return json(res, 405, { error: "使えない呼び出し方です。" });
-  if (!["/api/visit-summary", "/api/history-summary"].includes(path)) return json(res, 404, { error: "見つかりません。" });
+  if (!["/api/visit-summary", "/api/history-summary", "/api/daily-summary"].includes(path)) return json(res, 404, { error: "見つかりません。" });
   if (rateLimited(req)) return json(res, 429, { error: "続けて何度も押されました。1分ほど待ってから、もう一度お試しください。" });
 
   try {
@@ -106,6 +106,10 @@ async function handleApi(req, res, path) {
       if (transcript.length < 20) return json(res, 400, { error: "説明の内容を20文字以上入れてください。" });
       if (body.consent !== true) return json(res, 400, { error: "獣医師・スタッフの了承の確認が必要です。" });
       return json(res, 200, await summarizeVisit({ ...body, transcript }));
+    }
+    if (path === "/api/daily-summary") {
+      if (!Array.isArray(body.days) || body.days.length === 0) return json(res, 400, { error: "まとめる日々の記録がありません。" });
+      return json(res, 200, await summarizeDaily(body));
     }
     if (!Array.isArray(body.visits) || body.visits.length === 0) {
       return json(res, 400, { error: "まとめる受診の記録がありません。" });

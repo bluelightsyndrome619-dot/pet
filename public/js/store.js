@@ -3,9 +3,11 @@
 // - visits: 受診ごとの説明とまとめ
 // - photos: 皮膚・傷などの写真（画像そのものも保存）
 // - histories: 「これまでの受診歴」のまとめ（ペットごとに最新の1件）
+// - daily: 日々の記録（ペットごと・1日1件。日記・元気食欲・ごはん・体重・水・うんち・散歩）
+// - dailySummaries: 日々の経過のAIまとめ（ペットごとに最新の1件）
 
 const DB_NAME = "medikataru-pet";
-const DB_VERSION = 1;
+const DB_VERSION = 2; // 2: daily・dailySummaries を追加（今までの記録はそのまま）
 let dbPromise;
 
 function open() {
@@ -24,6 +26,10 @@ function open() {
         s.createIndex("visitId", "visitId");
       }
       if (!db.objectStoreNames.contains("histories")) db.createObjectStore("histories", { keyPath: "petId" });
+      if (!db.objectStoreNames.contains("daily")) {
+        db.createObjectStore("daily", { keyPath: "id" }).createIndex("petId", "petId");
+      }
+      if (!db.objectStoreNames.contains("dailySummaries")) db.createObjectStore("dailySummaries", { keyPath: "petId" });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -64,6 +70,8 @@ export const getPet = (id) => get("pets", id);
 export const savePet = (pet) => put("pets", { createdAt: new Date().toISOString(), ...pet, updatedAt: new Date().toISOString() });
 
 export async function deletePet(id) {
+  for (const d of await listDaily(id)) await del("daily", d.id);
+  await del("dailySummaries", id);
   for (const v of await listVisits(id)) await del("visits", v.id);
   for (const p of await listPhotos(id)) await del("photos", p.id);
   await del("histories", id);
@@ -95,6 +103,16 @@ export const deletePhoto = (id) => del("photos", id);
 export const getHistory = (petId) => get("histories", petId);
 export const saveHistory = (history) => put("histories", history);
 
+// ---------- 日々の記録 ----------
+export const dailyId = (petId, date) => `${petId}_${date}`;
+// 日付の新しい順
+export const listDaily = async (petId) => (await byIndex("daily", "petId", petId)).sort((a, b) => b.date.localeCompare(a.date));
+export const getDaily = (petId, date) => get("daily", dailyId(petId, date));
+export const saveDaily = (entry) => put("daily", { ...entry, id: dailyId(entry.petId, entry.date), updatedAt: new Date().toISOString() });
+export const deleteDaily = (petId, date) => del("daily", dailyId(petId, date));
+export const getDailySummary = (petId) => get("dailySummaries", petId);
+export const saveDailySummary = (summary) => put("dailySummaries", summary);
+
 // ---------- バックアップ ----------
 const blobToDataUrl = (blob) =>
   new Promise((resolve, reject) => {
@@ -108,11 +126,13 @@ export async function exportAll() {
   const photos = await all("photos");
   return {
     app: "medikataru-for-pet",
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     pets: await all("pets"),
     visits: await all("visits"),
     histories: await all("histories"),
+    daily: await all("daily"),
+    dailySummaries: await all("dailySummaries"),
     photos: await Promise.all(photos.map(async (p) => ({ ...p, blob: p.blob ? await blobToDataUrl(p.blob) : null }))),
   };
 }
@@ -122,21 +142,20 @@ export async function importAll(data) {
   for (const p of data.pets || []) await put("pets", p);
   for (const v of data.visits || []) await put("visits", v);
   for (const h of data.histories || []) await put("histories", h);
+  for (const d of data.daily || []) await put("daily", d);
+  for (const d of data.dailySummaries || []) await put("dailySummaries", d);
   for (const p of data.photos || []) {
     const blob = p.blob ? await (await fetch(p.blob)).blob() : null;
     await put("photos", { ...p, blob });
   }
-  return { pets: data.pets?.length || 0, visits: data.visits?.length || 0, photos: data.photos?.length || 0 };
+  return { pets: data.pets?.length || 0, visits: data.visits?.length || 0, photos: data.photos?.length || 0, daily: data.daily?.length || 0 };
 }
 
 // バックアップの声かけ用：記録の数と、いちばん古い記録の日時
 export async function dataSummary() {
-  const [visits, photos] = await Promise.all([
-    tx("visits", "readonly", (s) => done(s.getAll())),
-    tx("photos", "readonly", (s) => done(s.getAll())),
-  ]);
-  const firstAt = [...visits, ...photos].map((x) => x.createdAt).filter(Boolean).sort()[0] || null;
-  return { visits: visits.length, photos: photos.length, firstAt };
+  const [visits, photos, daily] = await Promise.all([all("visits"), all("photos"), all("daily")]);
+  const firstAt = [...visits, ...photos, ...daily].map((x) => x.createdAt).filter(Boolean).sort()[0] || null;
+  return { visits: visits.length, photos: photos.length, daily: daily.length, firstAt };
 }
 
 // 保存容量の目安（対応ブラウザのみ）。ブラウザに「消さないで」とお願いもしておく

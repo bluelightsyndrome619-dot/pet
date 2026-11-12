@@ -71,7 +71,7 @@ export async function runExport() {
 /** お知らせを出すかどうか。出すなら表示に使う情報を返す */
 export async function backupReminder(now = Date.now()) {
   const summary = await store.dataSummary();
-  if (summary.visits + summary.photos === 0) return null; // 守る記録がまだない
+  if (summary.visits + summary.photos + summary.daily === 0) return null; // 守る記録がまだない
   const snooze = read(SNOOZE_KEY);
   if (snooze && now < new Date(snooze).getTime()) return null;
   const last = lastBackupAt();
@@ -85,7 +85,7 @@ export async function renderBackupReminder(slot) {
   if (!slot) return;
   const r = await backupReminder();
   if (!r || !slot.isConnected) return;
-  const count = [r.visits ? `受診の記録${r.visits}件` : "", r.photos ? `写真${r.photos}枚` : ""].filter(Boolean).join("・");
+  const count = [r.visits ? `受診の記録${r.visits}件` : "", r.daily ? `日々の記録${r.daily}日分` : "", r.photos ? `写真${r.photos}枚` : ""].filter(Boolean).join("・");
   slot.innerHTML = `
     <section class="backup-banner" role="region" aria-label="バックアップのお知らせ">
       <p class="backup-title"><span class="backup-icon" aria-hidden="true">💾</span>${
