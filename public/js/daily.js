@@ -5,7 +5,7 @@
 // - 「日々の経過のまとめ」：次の受診で獣医師に見せるため、期間の記録を AI がまとめる（数値の集計はアプリが計算）
 
 import * as store from "./store.js";
-import { h, $, $$, today, formatDate, formatShortDate, daysBetween, toast, confirmDialog, showLoading, list, section, usageText } from "./ui.js";
+import { h, $, $$, today, formatDate, formatShortDate, daysBetween, toast, confirmDialog, showLoading, list, section } from "./ui.js";
 
 let ctx; // app.js から受け取る道具（avatar, back, notFound, photoFlow, postJson, go, petForAi, aiStatus, setCleanup, app）
 export function initDaily(context) {
@@ -622,7 +622,7 @@ export async function viewReport(petId, query) {
       </section>
       ${r.questions_for_vet.length ? section({ icon: "❓", title: "獣医師に聞いてみること", body: list(r.questions_for_vet) }) : ""}
       <p class="notice">これはAIがご家族の記録をまとめたものです。まちがいが入ることがあります。診察のときは、気になることを直接獣医師に伝えてください。</p>
-      <p class="muted small usage">${h(usageText(sum))}</p>`;
+`;
 
     const text = [
       `【MediKataru for pet】${pet.name}の日々の経過（${formatDate(from)}〜${formatDate(to)}）`,
@@ -705,7 +705,7 @@ export async function viewReport(petId, query) {
       const out = st.server ? await ctx.postJson("/api/daily-summary", payload) : localDemo(payload.days);
       const sum = await store.saveDailySummary({
         petId: pet.id, from, to, rangeKey: key, dataKey, result: out.result,
-        model: out.model, inputTokens: out.inputTokens, outputTokens: out.outputTokens, updatedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       });
       hide();
       paintResult(sum);
@@ -728,7 +728,6 @@ function localDemo(days) {
       energy_appetite: "記録なし", weight: "記録なし", water: "記録なし", stool: "記録なし", food_supplements: "記録なし", walks: "記録なし",
       events: [], questions_for_vet: [],
     },
-    model: "demo (サーバーなし)", inputTokens: 0, outputTokens: 0,
   };
 }
 

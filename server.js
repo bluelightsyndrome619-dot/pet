@@ -116,7 +116,8 @@ async function handleAdmin(req, res, path, url) {
   const denied = adminCheck(req);
   if (denied) return json(res, denied.status, { error: denied.error });
   try {
-    if (req.method === "GET" && path === "/api/admin/stats") return json(res, 200, await feedback.flagStats());
+    if (req.method === "GET" && path === "/api/admin/stats") return json(res, 200, { ...(await feedback.flagStats()), model: aiEnabled() ? MODEL : "demo" });
+    if (req.method === "GET" && path === "/api/admin/usage") return json(res, 200, { usage: await feedback.usageSummary(), model: aiEnabled() ? MODEL : "demo" });
     if (req.method === "GET" && path === "/api/admin/flags") {
       const status = ["open", "fixed", "approved", "dismissed"].includes(url.searchParams.get("status")) ? url.searchParams.get("status") : "open";
       return json(res, 200, { flags: await feedback.listFlags(status) });
@@ -146,7 +147,8 @@ async function handleAdmin(req, res, path, url) {
 
 async function handleApi(req, res, path, url) {
   if (path === "/api/health") return json(res, 200, { ok: true });
-  if (path === "/api/status") return json(res, 200, { ai: aiEnabled(), model: aiEnabled() ? MODEL : "demo" });
+  // モデル名は管理者だけに見せるため、ここでは返さない
+  if (path === "/api/status") return json(res, 200, { ai: aiEnabled() });
   if (path.startsWith("/api/admin/")) return handleAdmin(req, res, path, url);
 
   if (req.method !== "POST") return json(res, 405, { error: "使えない呼び出し方です。" });

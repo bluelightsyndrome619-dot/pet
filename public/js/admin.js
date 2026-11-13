@@ -60,14 +60,14 @@ export async function viewAdmin(query) {
   } catch (e) {
     return paintLogin(e.message);
   }
-  const tab = ["flags", "glossary", "stats", "done"].includes(query.get("tab")) ? query.get("tab") : "flags";
+  const tab = ["flags", "glossary", "stats", "done", "usage"].includes(query.get("tab")) ? query.get("tab") : "flags";
   const open = Object.values(stats.byModel).reduce((s, m) => s + (m.open || 0), 0);
 
   ctx.app.innerHTML = `
     ${ctx.back("#/settings", "設定にもどる")}
     <div class="page-head">
       <h1>管理者の確認</h1>
-      <p class="muted small">未確認の報告 <b>${open}件</b> ・ 用語辞書 <b>${stats.glossary}語</b></p>
+      <p class="muted small">未確認の報告 <b>${open}件</b> ・ 用語辞書 <b>${stats.glossary}語</b> ・ 今のAI <b>${h(stats.model || "")}</b></p>
       ${
         stats.mode === "file"
           ? `<p class="notice">⚠ 保存先がサーバーの中のファイルになっています。Render ではサーバーが入れ替わると消えるため、TURSO_DATABASE_URL と TURSO_AUTH_TOKEN を設定してください。</p>`
@@ -79,6 +79,7 @@ export async function viewAdmin(query) {
         ["flags", `未確認の報告（${open}）`],
         ["glossary", "用語辞書"],
         ["stats", "モデルごとの集計"],
+        ["usage", "AIの利用量"],
         ["done", "確認済み"],
       ]
         .map(([k, l]) => `<a class="chip-btn" href="#/admin?tab=${k}" aria-pressed="${k === tab}">${l}</a>`)
@@ -96,6 +97,7 @@ export async function viewAdmin(query) {
     if (tab === "done") await paintDone(query.get("status"));
     if (tab === "glossary") await paintGlossary();
     if (tab === "stats") paintStats(stats);
+    if (tab === "usage") await paintUsage();
   } catch (e) {
     if (e.status === 401) return paintLogin(e.message);
     $("#admin-body").innerHTML = `<div class="alert alert-error" role="alert">${h(e.message)}</div>`;
@@ -305,4 +307,31 @@ function paintStats(stats) {
         })
         .join("")}`
     : `<p class="notice">まだ報告がありません。</p>`;
+}
+
+// AI の利用量：月ごとの回数と金額（目安）。利用者の画面には出さない
+async function paintUsage() {
+  const { usage, model } = await api("/api/admin/usage");
+  const yen = (v) => (v === null || v === undefined ? "—" : `約${v < 10 ? v.toFixed(1) : Math.round(v).toLocaleString()}円`);
+  if (!usage.length) {
+    $("#admin-body").innerHTML = `<p class="notice">まだ記録がありません。AIでまとめると、ここに回数と金額が出ます（今のAI：${h(model)}）。</p>`;
+    return;
+  }
+  const months = [...new Set(usage.map((u) => u.month))];
+  $("#admin-body").innerHTML = `
+    <p class="muted small">金額は、使ったトークン数と公開価格から計算した目安です（1ドル150円で換算）。正確な請求額は Anthropic の管理画面で確認してください。だれが使ったかは記録していません。</p>
+    ${months
+      .map((m) => {
+        const rows = usage.filter((u) => u.month === m);
+        const total = rows.reduce((a, u) => a + (u.yen || 0), 0);
+        const count = rows.reduce((a, u) => a + u.count, 0);
+        return `<section class="card stats-card">
+          <h2 class="section-title">${m.replace("-", "年")}月</h2>
+          <p class="stats-rate"><span class="muted small">合計</span><b>${yen(total)}</b><span class="muted small">（${count}回・1回あたり ${yen(count ? total / count : null)}）</span></p>
+          <ul class="kv-list">${rows
+            .map((u) => `<li><span>${h(u.kind)}<br><small>${h(u.model)}</small></span><b>${u.count}回・${yen(u.yen)}</b></li>`)
+            .join("")}</ul>
+        </section>`;
+      })
+      .join("")}`;
 }

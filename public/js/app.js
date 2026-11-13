@@ -6,7 +6,7 @@ import { initDaily, viewDaily, viewDays, viewReport, dailySectionHtml } from "./
 import { initAdmin, viewAdmin } from "./admin.js";
 import {
   h, $, $$, today, formatDate, formatShortDate, daysBetween, ageText, toast, confirmDialog, openSheet,
-  showLoading, list, section, usageText,
+  showLoading, list, section,
 } from "./ui.js";
 
 // ============================================================
@@ -100,7 +100,6 @@ function localDemoVisit(transcript) {
       family: { headline: DEMO, explanation: s.join(""), key_points: s, home_care: [], medicines: [], warning_signs: [], next_schedule: [], glossary: [], confirm_with_vet: ["お試し表示のため、内容は必ず獣医師に確認してください。"] },
       record: { one_liner: DEMO, reason: "記載なし", findings: "記載なし", diagnosis: "記載なし", treatment: "記載なし", medications: [], tests: [], vaccines_preventives: [], weight: "記載なし", next_visit: "記載なし", uncertainties: [] },
     },
-    model: "demo (サーバーなし)", inputTokens: 0, outputTokens: 0,
   };
 }
 function localDemoHistory(visits) {
@@ -110,7 +109,6 @@ function localDemoHistory(visits) {
       timeline: [...visits].reverse().map((v) => ({ date: v.date, event: v.record?.one_liner || v.title })),
       preventive_care: [], cautions: [], weight_trend: "記録なし", upcoming: [], questions_for_next_visit: [],
     },
-    model: "demo (サーバーなし)", inputTokens: 0, outputTokens: 0,
   };
 }
 
@@ -900,9 +898,6 @@ async function viewRecord(petId) {
         title: out.result.title,
         family: out.result.family,
         record: out.result.record,
-        model: out.model,
-        inputTokens: out.inputTokens,
-        outputTokens: out.outputTokens,
         createdAt: new Date().toISOString(),
       });
       hide();
@@ -1047,7 +1042,7 @@ async function viewVisit(id, query) {
       <button type="button" class="btn btn-wide" id="print">🖨 印刷する</button>
       <button type="button" class="btn btn-danger-ghost" id="delete-visit">この記録を消す</button>
     </div>
-    <p class="muted small usage">${h(usageText(visit))}</p>`;
+`;
 
   // ---- 読み上げ ----
   if ("speechSynthesis" in window) {
@@ -1175,7 +1170,7 @@ async function viewVisit(id, query) {
       ${section({ icon: "📋", title: `受診の一覧（${visits.length}件）`, body: localTimeline })}
       ${section({ icon: "📷", title: "写真の記録（場所ごと・古い順）", body: photoLog })}
       ${r ? `<p class="notice">これはAIが記録をまとめたものです。まちがいが入ることがあります。気になる点は獣医師に確認してください。</p>` : ""}
-      ${r ? `<p class="muted small usage">${h(usageText(currentHistory))}</p>` : ""}`;
+`;
 
     $("#make-history").onclick = async () => {
       const ordered = [...visits].reverse();
@@ -1192,9 +1187,6 @@ async function viewVisit(id, query) {
           result: out.result,
           visitKey,
           photoCount: allPhotos.length,
-          model: out.model,
-          inputTokens: out.inputTokens,
-          outputTokens: out.outputTokens,
           updatedAt: new Date().toISOString(),
         });
         hide();
@@ -1513,7 +1505,7 @@ async function viewSettings() {
       body: aiStatus.offline
         ? `<p class="notice">📡 電波がないか、サーバーにつながりません。記録や写真は見られます。まとめるのは電波のあるところでお願いします。</p>`
         : aiStatus.ai
-          ? `<p class="alert alert-ok">使えます（${h(aiStatus.model)}）</p>`
+          ? `<p class="alert alert-ok">使えます</p>`
           : `<p class="notice">${
               aiStatus.server
                 ? "お試し表示中です。サーバーに ANTHROPIC_API_KEY を設定すると、AIでまとめられるようになります。"

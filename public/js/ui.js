@@ -155,23 +155,3 @@ export function section({ icon, title, body, tone = "" }) {
       ${body}
     </section>`;
 }
-
-/** 1Mトークンあたりの米ドル単価（元の MediKataru と同じ表）。管理用の目安 */
-const PRICES = {
-  "claude-sonnet-5-5": { input: 2, output: 10 },
-  "claude-opus-5-5": { input: 4, output: 20 },
-  "claude-haiku-5-5": { input: 0.1, output: 0.5 },
-};
-export function usageText(m) {
-  if (!m?.model) return "";
-  let text = `作成: ${m.model}`;
-  if (m.inputTokens > 0) {
-    text += ` ・ AI利用量 入力${m.inputTokens.toLocaleString()} / 出力${m.outputTokens.toLocaleString()}トークン`;
-    const price = Object.entries(PRICES).find(([id]) => m.model.startsWith(id))?.[1];
-    if (price) {
-      const yen = ((m.inputTokens * price.input + m.outputTokens * price.output) / 1_000_000) * 150;
-      text += `（約${yen < 1 ? yen.toFixed(2) : yen.toFixed(1)}円）`;
-    }
-  }
-  return text;
-}
