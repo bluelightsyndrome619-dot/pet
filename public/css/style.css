@@ -659,6 +659,34 @@ a.chip-btn { display: inline-flex; align-items: center; text-decoration: none; }
 .wc figcaption { margin-top: 4px; }
 .wc-table { margin-top: 8px; }
 
+/* ---------- 管理者の確認 ---------- */
+.flag-card { display: grid; gap: 10px; }
+.flag-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin: 0; }
+.flag-dl { margin: 0; display: grid; gap: 8px; }
+.flag-dl div { display: grid; grid-template-columns: 7em 1fr; gap: 8px; }
+.flag-dl dt { color: var(--muted); font-size: 0.85rem; font-weight: 700; padding-top: 2px; }
+.flag-dl dd { margin: 0; overflow-wrap: anywhere; }
+.flag-term { font-weight: 700; font-size: 1.1rem; }
+.flag-context { background: var(--surface-2); border-radius: 10px; padding: 6px 10px; font-size: 0.92rem; }
+@media (max-width: 480px) { .flag-dl div { grid-template-columns: 1fr; gap: 0; } }
+.flag-form { border-top: 1px dashed var(--border-soft); padding-top: 12px; }
+.flag-form label { margin: 0; }
+.flag-form input, .flag-form textarea { margin-top: 4px; }
+.flag-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.flag-actions .btn-primary { flex: 1 1 220px; }
+.gl-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.gl-item { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 14px; }
+.gl-item.is-off { opacity: 0.6; }
+.gl-text { display: grid; gap: 2px; flex: 1 1 220px; min-width: 0; }
+.gl-actions { display: flex; gap: 6px; }
+.stats-rate { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 0 0 8px; }
+.stats-rate b { font-size: 1.8rem; color: var(--primary); }
+.table-wrap { overflow-x: auto; }
+.stats-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; white-space: nowrap; }
+.stats-table th, .stats-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-soft); text-align: right; }
+.stats-table th[scope="row"], .stats-table thead th:first-child { text-align: left; }
+.stats-table thead th { color: var(--muted); font-size: 0.8rem; }
+
 /* ---------- 待ち時間・お知らせ ---------- */
 .overlay { position: fixed; inset: 0; z-index: 100; background: rgba(43, 22, 10, 0.55); display: grid; place-items: center; padding: 20px; backdrop-filter: blur(4px); }
 .overlay-box { background: var(--surface); border-radius: 28px; padding: 30px 26px; text-align: center; max-width: 420px; box-shadow: var(--shadow-lg); }

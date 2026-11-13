@@ -3,6 +3,7 @@ import { takePhoto, pickFile, makeThumb } from "./camera.js";
 import { renderBackupReminder, runExport, markBackedUp, lastBackupText } from "./backup.js";
 import { initPwa, renderInstallGuide } from "./pwa.js";
 import { initDaily, viewDaily, viewDays, viewReport, dailySectionHtml } from "./daily.js";
+import { initAdmin, viewAdmin } from "./admin.js";
 import {
   h, $, $$, today, formatDate, formatShortDate, daysBetween, ageText, toast, confirmDialog, openSheet,
   showLoading, list, section, usageText,
@@ -151,6 +152,7 @@ async function render() {
   try {
     if (parts.length === 0) await viewHome();
     else if (parts[0] === "settings") await viewSettings();
+    else if (parts[0] === "admin") await viewAdmin(query);
     else if (parts[0] === "pet" && parts[1] === "new") await viewPetForm(null);
     else if (parts[0] === "pet" && parts[2] === "edit") await viewPetForm(parts[1]);
     else if (parts[0] === "pet" && parts[2] === "record") await viewRecord(parts[1]);
@@ -1544,10 +1546,12 @@ async function viewSettings() {
       body: `<ul class="big-list">
           <li>写真はサーバーに送りません。この端末の中だけに保存します。</li>
           <li>「まとめる」を押したときだけ、説明の文字と、受診歴のまとめでは写真のメモ（文字）がAIに送られます。</li>
+          <li>言い換えの質をよくするため、AIが判断に迷った言葉と前後の短い文だけを、管理者（医師）が確認します。名前・病院名・電話番号などは消してから保存し、だれの記録かはわからないようにしています。</li>
           <li>録音は、獣医師・スタッフの了承をもらってから行ってください。</li>
         </ul>`,
     })}
-    <p class="muted small center">MediKataru for pet ・ これはAIによる下書きです。診断や治療の判断には使わず、必ず獣医師に確認してください。</p>`;
+    <p class="muted small center">MediKataru for pet ・ これはAIによる下書きです。診断や治療の判断には使わず、必ず獣医師に確認してください。</p>
+    <p class="center"><a class="text-link small" href="#/admin">管理者の方へ（言い換えの確認）</a></p>`;
 
   renderInstallGuide($("#install-slot"));
   $("#export").onclick = async () => {
@@ -1618,6 +1622,7 @@ initDaily({
   aiStatus: () => aiStatus,
   setCleanup: (fn) => (cleanup = fn),
 });
+initAdmin({ app, back, go, render });
 startApp();
 
 // サーバー（Render の無料プラン）は、しばらく使われないと眠り、起きるまで30秒ほどかかる。
