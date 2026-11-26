@@ -659,13 +659,6 @@ a.chip-btn { display: inline-flex; align-items: center; text-decoration: none; }
 .wc figcaption { margin-top: 4px; }
 .wc-table { margin-top: 8px; }
 
-/* ---------- 音声を文字にする方法の説明 ---------- */
-.speech-mode { min-height: 1.5em; }
-.speech-note { background: var(--warn-bg); color: var(--warn-text); border: 1px solid var(--warn-border); border-radius: var(--radius-sm); padding: 12px 14px; display: grid; gap: 8px; }
-.speech-note p { margin: 0; }
-.speech-note.is-local, p.speech-note.is-local { display: block; background: var(--ok-soft); color: var(--ok); border-color: currentColor; }
-.speech-note .btn { justify-self: start; white-space: normal; text-align: left; }
-
 /* ---------- 管理者の確認 ---------- */
 .flag-card { display: grid; gap: 10px; }
 .flag-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin: 0; }

@@ -255,7 +255,7 @@ async function viewHome() {
       <span>うちの子を登録する<span class="btn-sub">犬・猫・うさぎ・鳥など</span></span>
     </a>
 
-    <p class="privacy-note">🔒 記録と写真は、この端末のブラウザの中だけに保存されます。録音した声や、まとめるときの文字の行き先は「設定」の「プライバシー」で確認できます。機種変更の前は「設定」からバックアップしてください。</p>`;
+    <p class="privacy-note">🔒 記録と写真は、この端末のブラウザの中だけに保存されます（録音した声の扱いは「設定」のプライバシーをご覧ください）。機種変更の前は「設定」からバックアップしてください。</p>`;
   renderBackupReminder($("#backup-slot"));
   renderInstallGuide($("#install-slot"), { dismissible: true });
 }
@@ -617,26 +617,6 @@ function getRecognition() {
   return window.SpeechRecognition || window.webkitSpeechRecognition;
 }
 
-// 音声を「端末の中だけ」で文字にできるか（Chrome などの新しい仕組み。対応していなければ online）
-// - local: 端末の中で文字にする。音声は外に送られない
-// - downloadable: 日本語のデータをダウンロードすれば、端末の中でできる
-// - online: ブラウザの提供元（Google・Apple など）のサーバーで文字にする
-async function detectSpeechMode() {
-  const Ctor = getRecognition();
-  if (!Ctor || typeof Ctor.available !== "function" || !("processLocally" in Ctor.prototype)) return "online";
-  // アプリ内ブラウザ（LINE などの Android WebView）や、機能をけずったテスト用のブラウザでは確かめない
-  // （音声のしくみがなく、確かめるだけで画面が落ちることがあるため）。この場合は online として説明する
-  if (/; wv\)|HeadlessChrome/.test(navigator.userAgent)) return "online";
-  try {
-    const state = await Ctor.available({ langs: ["ja-JP"], processLocally: true });
-    if (state === "available") return "local";
-    if (state === "downloadable" || state === "downloading") return "downloadable";
-  } catch {
-    /* 判定できなければ online として説明する */
-  }
-  return "online";
-}
-
 async function viewRecord(petId) {
   const pet = await store.getPet(petId);
   if (!pet) return notFound();
@@ -669,7 +649,7 @@ async function viewRecord(petId) {
       <label class="choice">
         <input type="checkbox" id="consent">
         <span>獣医師・スタッフに「録音して、家族向けにまとめたい」と伝え、了承をもらいました
-          <span class="hint">了承がないと記録できません。録音した声は、文字にするために、スマホの中か、ブラウザの提供元（Google・Apple など）のサーバーで処理されます（次の画面で表示します）</span></span>
+          <span class="hint">了承がないと記録できません。声は、文字にするためにスマホのブラウザの音声入力（Google・Apple など）で処理されることがあります</span></span>
       </label>
       <div class="grid-2">
         <div>
@@ -700,8 +680,7 @@ async function viewRecord(petId) {
       <h2 class="step-title"><span class="step-num">2</span>説明を録音します</h2>
       ${
         supported
-          ? `<div id="speech-mode" class="speech-mode" role="status" aria-live="polite"><p class="muted small">音声を文字にする方法を確かめています…</p></div>
-             <p class="muted">説明が始まったら、下の丸いボタンを押してください。終わったらもう一度押します。</p>
+          ? `<p class="muted">説明が始まったら、下の丸いボタンを押してください。終わったらもう一度押します。</p>
              <div class="rec-wrap">
                <button type="button" class="rec-btn" id="rec-btn" aria-pressed="false">
                  <span class="rec-icon" aria-hidden="true">🎙</span><span id="rec-label">押して録音</span>
@@ -757,7 +736,6 @@ async function viewRecord(petId) {
       if (i === n) li.setAttribute("aria-current", "step");
       else li.removeAttribute("aria-current");
     });
-    if (n === 1) ensureMode();
     if (n === 2) {
       ta.value = transcript;
       updateCount();
@@ -791,69 +769,10 @@ async function viewRecord(petId) {
     $("#type-instead").hidden = Boolean(transcript);
   }
 
-  // ---- 音声を文字にする方法（端末の中／ブラウザの提供元のサーバー） ----
-  let speechMode = "checking";
-  let localFailed = false;
-  const ONLINE_TEXT =
-    "録音した声は、文字にするために、ブラウザの提供元（iPhoneはApple、AndroidやChromeはGoogleなど）のサーバーに送られることがあります。このアプリのサーバーやAIには、声は送りません（送るのは文字だけです）。声を外に送りたくないときは「録音せずに文字で入力する」を使ってください。";
-  function paintMode() {
-    const box = $("#speech-mode");
-    if (!box) return;
-    if (speechMode === "checking") return;
-    if (speechMode === "local") {
-      box.innerHTML = `<p class="speech-note is-local">🔒 <b>この端末の中で</b>文字にします。録音した声は外に送られません。</p>`;
-    } else if (localFailed) {
-      box.innerHTML = `<div class="speech-note">
-          <p><b>この端末の中では文字にできませんでした。</b></p>
-          <p class="small">${ONLINE_TEXT}</p>
-          <button type="button" class="btn btn-sm" id="use-online">ブラウザの提供元のしくみで文字にする</button>
-        </div>`;
-      $("#use-online").onclick = () => {
-        localFailed = false;
-        speechMode = "online";
-        paintMode();
-        $("#rec-btn").disabled = false;
-      };
-      $("#rec-btn").disabled = true;
-    } else {
-      box.innerHTML = `<div class="speech-note">
-          <p class="small">🎙 ${ONLINE_TEXT}</p>
-          ${
-            speechMode === "downloadable"
-              ? `<button type="button" class="btn btn-sm" id="install-local">🔒 端末の中だけで文字にする（はじめに日本語のデータをダウンロードします）</button>`
-              : ""
-          }
-        </div>`;
-      const btn = $("#install-local");
-      if (btn) {
-        btn.onclick = async () => {
-          btn.disabled = true;
-          btn.textContent = "日本語のデータを準備しています…";
-          try {
-            const ok = await getRecognition().install({ langs: ["ja-JP"], processLocally: true });
-            if (ok === false) throw new Error("install failed");
-            speechMode = "local";
-            toast("この端末の中で文字にできるようになりました");
-          } catch {
-            toast("準備できませんでした。電波のよいところで、もう一度お試しください");
-          }
-          paintMode();
-        };
-      }
-    }
-  }
-  async function ensureMode() {
-    if (!supported || speechMode !== "checking") return;
-    speechMode = await detectSpeechMode();
-    paintMode();
-  }
-
   function startRec() {
     const Ctor = getRecognition();
     rec = new Ctor();
     rec.lang = "ja-JP";
-    // 端末の中で文字にできるときは、外に送らない方式を指定する
-    if (speechMode === "local") rec.processLocally = true;
     rec.continuous = true;
     rec.interimResults = true;
     rec.onresult = (e) => {
@@ -870,13 +789,6 @@ async function viewRecord(petId) {
     rec.onerror = (e) => {
       if (e.error === "no-speech") return;
       want = false;
-      // 端末の中で文字にすると約束しているので、失敗しても勝手にサーバー方式へ切り替えない
-      if (speechMode === "local" && e.error !== "not-allowed" && e.error !== "aborted") {
-        localFailed = true;
-        speechMode = "online-pending";
-        paintMode();
-        return;
-      }
       $("#speech-error").hidden = false;
       $("#speech-error").textContent =
         e.error === "not-allowed"
@@ -918,14 +830,7 @@ async function viewRecord(petId) {
     clearInterval(timer);
     if (supported && $("#rec-btn")) paintRec();
   }
-  if (supported) {
-    $("#rec-btn").onclick = async () => {
-      if (recording) return stopRec();
-      await ensureMode(); // 方式の説明を出してから録音を始める
-      if (speechMode === "online-pending") return;
-      startRec();
-    };
-  }
+  if (supported) $("#rec-btn").onclick = () => (recording ? stopRec() : startRec());
   cleanup = stopRec;
 
   // ---- 写真 ----
@@ -1632,8 +1537,8 @@ async function viewSettings() {
       title: "プライバシー",
       body: `<ul class="big-list">
           <li>記録と写真は、この端末の中だけに保存します。写真はサーバーにもAIにも送りません。</li>
-          <li><b>録音した声</b>は、文字にするために、端末の中で処理されるか、ブラウザの提供元（iPhoneはApple、AndroidやChromeはGoogleなど）のサーバーに送られます。どちらになるかは録音の画面に表示します。このアプリのサーバーやAIには、声は送りません。</li>
-          <li>「まとめる」を押したときだけ、説明の<b>文字</b>（受診歴・日々の経過のまとめでは、記録や写真のメモの文字）が、このアプリのサーバーを通ってAIに送られます。</li>
+          <li>録音した声は、このアプリのサーバーやAIには送りません。ただし声を文字にするのはブラウザの音声入力の機能のため、ブラウザによっては、声がその提供元（Google・Apple など）のサーバーで処理されます。</li>
+          <li>「まとめる」を押したときだけ、説明の文字と、受診歴・日々の経過のまとめでは記録や写真のメモ（文字）がAIに送られます。</li>
           <li>AIが判断に迷った言葉と前後の短い文だけを、管理者（医師）が確認します。名前や病院名などは消して保存します。</li>
           <li>録音は、獣医師・スタッフの了承をもらってから行ってください。</li>
         </ul>`,
