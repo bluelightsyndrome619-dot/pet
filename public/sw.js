@@ -7,7 +7,7 @@
 //
 // 画面のファイルを増やしたら PRECACHE に足し、VERSION を上げる
 
-const VERSION = "v6";
+const VERSION = "v7";
 const CACHE = `mkp-shell-${VERSION}`;
 const PRECACHE = [
   "/",
